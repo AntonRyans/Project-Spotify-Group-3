@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import statsmodels.api as sm
 
-df = pd.read_csv(r"C:\Users\sande\Downloads\artist_data.csv")
+df = pd.read_csv(r"artist_data.csv")
 
 
 df = df[['artist_popularity', 'followers']].dropna()
