@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="UTF-8"?><sqlb_project><db path="spotify_database.db" readonly="0" foreign_keys="1" case_sensitive_like="0" temp_store="0" wal_autocheckpoint="1000" synchronous="2"/><attached/><window><main_tabs open="structure browser pragmas query" current="3"/></window><tab_structure><column_width id="0" width="300"/><column_width id="1" width="0"/><column_width id="2" width="100"/><column_width id="3" width="3292"/><column_width id="4" width="0"/><expanded_item id="0" parent="1"/><expanded_item id="1" parent="1"/><expanded_item id="2" parent="1"/><expanded_item id="3" parent="1"/></tab_structure><tab_browse><table title="albums_data" custom_title="0" dock_id="1" table="4,11:mainalbums_data"/><dock_state state="000000ff00000000fd000000010000000200000139000002a6fc0100000001fb000000160064006f0063006b00420072006f00770073006500310100000000000001390000013900ffffff000001390000000000000004000000040000000800000008fc00000000"/><default_encoding codec=""/><browse_table_settings><table schema="main" name="albums_data" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_" freeze_columns="0"><sort><column index="7" mode="1"/></sort><column_widths><column index="1" value="300"/><column index="2" value="179"/><column index="3" value="87"/><column index="4" value="79"/><column index="5" value="93"/><column index="6" value="44"/><column index="7" value="75"/><column index="8" value="300"/><column index="9" value="187"/><column index="10" value="300"/><column index="11" value="106"/><column index="12" value="179"/><column index="13" value="179"/><column index="14" value="257"/><column index="15" value="300"/><column index="16" value="300"/><column index="17" value="156"/><column index="18" value="101"/><column index="19" value="52"/><column index="20" value="52"/><column index="21" value="52"/><column index="22" value="52"/><column index="23" value="52"/><column index="24" value="59"/><column index="25" value="59"/><column index="26" value="80"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table></browse_table_settings></tab_browse><tab_sql><sql name="SQL 1*">SELECT 
+
+    al.album_name,
+
+    ar.name AS artist_name,
+
+    ar.artist_popularity,
+
+    al.album_popularity
+
+FROM albums_data al
+
+JOIN artist_data ar ON al.artist_id = ar.id
+
+ORDER BY ar.artist_popularity DESC;
+
+
+
+SELECT 
+
+    ar.name AS artist_name,
+
+    ar.artist_popularity,
+
+    AVG(al.album_popularity) AS avg_album_popularity
+
+FROM artist_data ar
+
+JOIN albums_data al ON ar.id = al.artist_id
+
+GROUP BY ar.id
+
+ORDER BY ar.artist_popularity DESC;
+
+
+
+SELECT 
+
+    CASE
+
+        WHEN ar.artist_popularity &gt;= 80 THEN 'Very Popular'
+
+        WHEN ar.artist_popularity &gt;= 60 THEN 'Popular'
+
+        WHEN ar.artist_popularity &gt;= 40 THEN 'Moderate'
+
+        ELSE 'Less Popular'
+
+    END AS artist_popularity_group,
+
+    AVG(al.album_popularity) AS avg_album_popularity
+
+FROM artist_data ar
+
+JOIN albums_data al ON ar.id = al.artist_id
+
+GROUP BY artist_popularity_group;
+
+
+
+SELECT
+
+    al.track_id,
+
+    t.track_popularity,
+
+    (
+
+        (al.artist_0 IS NOT NULL) +
+
+        (al.artist_1 IS NOT NULL) +
+
+        (al.artist_2 IS NOT NULL) +
+
+        (al.artist_3 IS NOT NULL) +
+
+        (al.artist_4 IS NOT NULL) +
+
+        (al.artist_5 IS NOT NULL)
+
+    ) AS artist_count
+
+FROM albums_data al
+
+JOIN tracks_data t ON al.track_id = t.id;
+
+SELECT
+
+    track_type,
+
+    AVG(track_popularity) AS avg_track_popularity
+
+FROM (
+
+    SELECT
+
+        t.track_popularity,
+
+        CASE
+
+            WHEN (
+
+                (al.artist_0 IS NOT NULL) +
+
+                (al.artist_1 IS NOT NULL) +
+
+                (al.artist_2 IS NOT NULL) +
+
+                (al.artist_3 IS NOT NULL) +
+
+                (al.artist_4 IS NOT NULL) +
+
+                (al.artist_5 IS NOT NULL)
+
+            ) = 1 THEN 'Solo'
+
+            ELSE 'Collaboration'
+
+        END AS track_type
+
+    FROM albums_data al
+
+    JOIN tracks_data t ON al.track_id = t.id
+
+) sub
+
+GROUP BY track_type;  SELECT
+
+    artist_count,
+
+    AVG(track_popularity) AS avg_popularity
+
+FROM (
+
+    SELECT
+
+        t.track_popularity,
+
+        (
+
+            (al.artist_0 IS NOT NULL) +
+
+            (al.artist_1 IS NOT NULL) +
+
+            (al.artist_2 IS NOT NULL) +
+
+            (al.artist_3 IS NOT NULL) +
+
+            (al.artist_4 IS NOT NULL) +
+
+            (al.artist_5 IS NOT NULL)
+
+        ) AS artist_count
+
+    FROM albums_data al
+
+    JOIN tracks_data t ON al.track_id = t.id
+
+) sub
+
+GROUP BY artist_count
+
+ORDER BY artist_count;</sql><current_tab id="0"/></tab_sql></sqlb_project>
