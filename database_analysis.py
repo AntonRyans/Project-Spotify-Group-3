@@ -2,11 +2,35 @@ import sqlite3
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.stats import zscore
 
 
 def connect_db():
     return sqlite3.connect("data/spotify_database.db")
 
+def outliers(conn):
+
+    cursor = conn.cursor()
+
+    query = "SELECT * FROM tracks_data"
+    df = pd.read_sql_query(query, conn)
+
+    # Select only numeric columns
+    numeric_cols = df.select_dtypes(include=[np.number]).columns
+    df_numeric = df[numeric_cols]
+
+    # Compute Z-scores
+    z_scores = np.abs(zscore(df_numeric, nan_policy='omit'))
+
+    # Threshold (commonly 3)
+    threshold = 3
+
+    # Boolean mask for outliers
+    outliers_z = (z_scores > threshold)
+
+    # Count outliers per column
+    print("Outliers per column (Z-score):")
+    print(pd.DataFrame(outliers_z, columns=numeric_cols).sum())
 
 def analyze_album(conn, album_name):
 
@@ -205,6 +229,75 @@ def analyze_eras(conn):
     print("\nEra extraction preview:")
     print(column_names)
 
+def monthly_popularity(conn):
+
+    query = """
+    SELECT 
+        a.track_name,
+        a.release_date,
+        t.track_popularity
+    FROM albums_data a
+    JOIN tracks_data t
+    ON a.track_id = t.id
+    """
+
+    df = pd.read_sql_query(query, conn)
+
+    # Data Cleaning
+    df['track_popularity'] = pd.to_numeric(df['track_popularity'], errors='coerce')
+    df['release_date'] = pd.to_datetime(df['release_date'], errors='coerce')
+
+    df = df.dropna(subset=['track_name', 'track_popularity', 'release_date'])
+
+    # Create Month Column
+    df['year_month'] = df['release_date'].dt.to_period('M')
+
+    #  Find Top Songs
+    top_songs = (
+        df.groupby('track_name')['track_popularity']
+        .sum()
+        .sort_values(ascending=False)
+        .head(10)
+    )
+
+    top_song_names = top_songs.index.tolist()
+
+    print("Top 10 Songs by Total Popularity:")
+    print(top_songs)
+
+    # Filter Top Songs
+    df_top = df[df['track_name'].isin(top_song_names)]
+
+    # Aggregate Monthly Data
+    monthly_agg = (
+        df_top.groupby(['year_month', 'track_name'])
+        .agg({
+            'track_popularity': 'mean'
+        })
+        .reset_index()
+    )
+
+    # Convert for plotting
+    monthly_agg['year_month'] = monthly_agg['year_month'].astype(str)
+
+    # Sort properly
+    monthly_agg = monthly_agg.sort_values('year_month')
+
+    # Plot Popularity Over Time
+    plt.figure()
+
+    for song in top_song_names:
+        song_data = monthly_agg[monthly_agg['track_name'] == song]
+        plt.plot(song_data['year_month'], song_data['track_popularity'], label=song)
+
+    plt.title('Monthly Popularity Trends for Top Songs')
+    plt.xlabel('Month')
+    plt.ylabel('Average Popularity')
+    plt.xticks(rotation=45)
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
 
 def explicit_vs_nonexplicit(conn):
 
@@ -230,13 +323,16 @@ def explicit_vs_nonexplicit(conn):
 
     print("The average popularity for explicit tracks is:", explicit)
 
-
 def main():
 
     conn = connect_db()
 
     album = "Black Sand"
     feature = "loudness"
+
+    outliers(conn)
+
+    print("-" * 60)
 
     analyze_album(conn, album)
 
@@ -255,6 +351,10 @@ def main():
     print("-" * 60)
 
     analyze_eras(conn)
+
+    print("-" * 60)
+
+    monthly_popularity(conn)
 
     print("-" * 60)
 
