@@ -1,17 +1,18 @@
+# Import Libraries
 import sqlite3
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import zscore
 
-
+# Connect to Database
 def connect_db():
     return sqlite3.connect("data/spotify_database.db")
 
+# Find outliers using Z-scores
 def outliers(conn):
 
-    cursor = conn.cursor()
-
+    # SQL Query to get all data from table and Read Query to Dataframe
     query = "SELECT * FROM tracks_data"
     df = pd.read_sql_query(query, conn)
 
@@ -22,7 +23,7 @@ def outliers(conn):
     # Compute Z-scores
     z_scores = np.abs(zscore(df_numeric, nan_policy='omit'))
 
-    # Threshold (commonly 3)
+    # Threshold 
     threshold = 3
 
     # Boolean mask for outliers
@@ -32,18 +33,22 @@ def outliers(conn):
     print("Outliers per column (Z-score):")
     print(pd.DataFrame(outliers_z, columns=numeric_cols).sum())
 
+# Analyze an album
 def analyze_album(conn, album_name):
 
+    # Connecting to Dataframe using Cursor
     cursor = conn.cursor()
 
     print(f"\nAnalyzing album: {album_name}")
 
+    # SQL Query to Count number of tracks in the given album
     cursor.execute("""
         SELECT COUNT(track_id)
         FROM albums_data
         WHERE album_name = ?
     """, (album_name,))
-
+ 
+    # Fetching tracks from an Album using Cursor
     track_count = cursor.fetchone()[0]
 
     print(f"Number of tracks in album: {track_count}")
@@ -51,7 +56,8 @@ def analyze_album(conn, album_name):
     if track_count == 0:
         print("No data found for this album.")
         return
-
+    
+    # SQL Query to get track names along with selected audio features
     cursor.execute("""
         SELECT 
             albums_data.track_name,
@@ -63,8 +69,10 @@ def analyze_album(conn, album_name):
         WHERE albums_data.album_name = ?
     """, (album_name,))
 
+    # Fetching tracks from an Album using Cursor to Variable
     tracks = cursor.fetchall()
 
+    # Create Dataframe
     df = pd.DataFrame(
         tracks,
         columns=["track_name", "danceability", "loudness"]
@@ -76,13 +84,14 @@ def analyze_album(conn, album_name):
     print("\nFeature Statistics:")
     print(df[["danceability", "loudness"]].describe())
 
-
+# Analyze features of tracks
 def analyze_feature(conn, feature_name):
 
     cursor = conn.cursor()
 
     print(f"\nAnalyzing top 10% tracks based on {feature_name}")
 
+    # SQL Query to get track names, artists, and selected feature by joining albums_data with features_data
     cursor.execute(f"""
         SELECT 
             albums_data.track_name,
@@ -97,6 +106,7 @@ def analyze_feature(conn, feature_name):
             ON albums_data.track_id = features_data.id
     """)
 
+    # Fetching all rows from query and adding it to Variable
     rows = cursor.fetchall()
 
     if not rows:
@@ -108,28 +118,37 @@ def analyze_feature(conn, feature_name):
         "artist_3","artist_4", feature_name
     ]
 
+    # Create Dataframe with variables
     df = pd.DataFrame(rows, columns=columns)
 
+    # Drop rows where the selected feature is missing
     df = df.dropna(subset=[feature_name])
 
+    # Calculate the 90th percentile threshold (top 10%)
     threshold = df[feature_name].quantile(0.90)
 
+    # Filter dataset to only include top 10% tracks
     df_top = df[df[feature_name] >= threshold]
 
+    # Columns containing artist names (multiple artists per track)
     artist_cols = ["artist_0","artist_1","artist_2","artist_3","artist_4"]
 
+    # Convert wide artist columns into long format (one artist per row)
     df_new = df_top.melt(
         id_vars=["track_name", feature_name],
         value_vars=artist_cols,
         value_name="artist"
     )
 
+    # Remove missing or empty artist names
     df_new = df_new.dropna(subset=["artist"])
     df_new = df_new[df_new["artist"].astype(str).str.strip() != ""]
 
+    # Display most frequent artists in top 10% tracks
     print(f"\nArtists appearing most in top 10% tracks based on {feature_name}:")
     print(df_new["artist"].value_counts().head(10))
 
+    # Display average feature score per artist
     print(f"\nAverage {feature_name} score per artist:")
     print(
         df_new.groupby("artist")[feature_name]
@@ -138,11 +157,12 @@ def analyze_feature(conn, feature_name):
         .head(10)
     )
 
-
+# Plot histogram of a specific audio feature for a given album.
 def plot_feature_distribution(conn, album_name, feature_name):
 
     cursor = conn.cursor()
 
+    # Fetch feature values for the selected album
     cursor.execute(f"""
         SELECT 
             features_data.{feature_name}
@@ -152,12 +172,15 @@ def plot_feature_distribution(conn, album_name, feature_name):
         WHERE albums_data.album_name = ?
     """, (album_name,))
 
+    # Extract values from query result
     values = [row[0] for row in cursor.fetchall()]
 
+    # Handle case where no data is returned
     if len(values) == 0:
         print("No data found for plotting.")
         return
 
+    # Create histogram
     plt.figure(figsize=(8,5))
 
     hist_values, _, _ = plt.hist(
@@ -167,22 +190,25 @@ def plot_feature_distribution(conn, album_name, feature_name):
         edgecolor="black"
     )
 
+    # Adjust y-axis to show integer counts
     if len(hist_values) > 0:
         y_max = max(hist_values) + 1
         plt.ylim(0, y_max)
         plt.yticks(np.arange(0, y_max + 1, 1))
 
+    # Label plot
     plt.xlabel(feature_name)
     plt.ylabel("Frequency")
     plt.title(f"{feature_name} distribution for {album_name}")
 
     plt.show()
 
-
+# Analyze proportion of explicit tracks per artist.
 def explicit_artist_analysis(conn):
 
     cursor = conn.cursor()
 
+    # SQL query to calculate explicit track proportion
     cursor.execute("""
         SELECT
             a.artist_0,
@@ -203,19 +229,22 @@ def explicit_artist_analysis(conn):
 
     rows = cursor.fetchall()
 
+    # Get column names from query
     column_names = [column[0] for column in cursor.description]
 
     print("\nExplicit proportion per artist:")
     print(column_names)
 
+    # Print results
     for row in rows:
         print(row)
 
-
+# Preview extraction of release decade (e.g., 1990s, 2000s).
 def analyze_eras(conn):
 
     cursor = conn.cursor()
 
+    # Extract decade from release_date using string manipulation
     cursor.execute("""
         SELECT *,
                (CAST(CAST(SUBSTR(release_date, 1, 4) AS INTEGER) / 10 AS INTEGER) * 10) || "s" AS decade
@@ -229,6 +258,7 @@ def analyze_eras(conn):
     print("\nEra extraction preview:")
     print(column_names)
 
+# Analyze monthly popularity trends for top songs.
 def monthly_popularity(conn):
 
     query = """
@@ -299,10 +329,12 @@ def monthly_popularity(conn):
     plt.show()
 
 
+# Compare average popularity of explicit vs non-explicit tracks.
 def explicit_vs_nonexplicit(conn):
 
     cursor = conn.cursor()
 
+    # Average popularity for non-explicit tracks
     cursor.execute("""
         SELECT CAST(AVG(track_popularity) AS INTEGER)
         FROM tracks_data
@@ -313,6 +345,7 @@ def explicit_vs_nonexplicit(conn):
 
     print("The average popularity for non-explicit tracks is:", non_explicit)
 
+    # Average popularity for explicit tracks
     cursor.execute("""
         SELECT CAST(AVG(track_popularity) AS INTEGER)
         FROM tracks_data
@@ -323,12 +356,15 @@ def explicit_vs_nonexplicit(conn):
 
     print("The average popularity for explicit tracks is:", explicit)
 
+# Main function to run all analyses.
 def main():
 
     conn = connect_db()
 
     album = "Black Sand"
     feature = "loudness"
+
+    # Run different analyses
 
     outliers(conn)
 
@@ -360,8 +396,9 @@ def main():
 
     explicit_vs_nonexplicit(conn)
 
+    # Close database connection
     conn.close()
 
-
+# Entry point of the script
 if __name__ == "__main__":
     main()
