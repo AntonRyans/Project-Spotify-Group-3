@@ -20,71 +20,28 @@ def basic_inspection(df):
 
 
 def top_10_artists(df):
+    # Compute top 10 artists by average popularity
     top_10 = (
         df.groupby("name")["artist_popularity"]
         .mean()
         .sort_values(ascending=False)
         .head(10)
     )
-
-    print("\nTop 10 Artists:\n", top_10)
-
-    plt.figure()
-    plt.bar(top_10.index, top_10.values)
-    plt.title('Top 10 Artists by Popularity')
-    plt.xlabel('Artist')
-    plt.ylabel('Popularity')
+    
+    # Show as a clean table
+    st.dataframe(top_10.reset_index().rename(columns={"name":"Artist","artist_popularity":"Popularity"}))
+    
+    # Bar chart
+    fig, ax = plt.subplots(figsize=(8,5))
+    ax.bar(top_10.index, top_10.values, color='dodgerblue')
+    ax.set_xlabel("Artist")
+    ax.set_ylabel("Average Popularity")
+    ax.set_title("Top 10 Artists by Popularity")
     plt.xticks(rotation=45)
     plt.tight_layout()
-    plt.show()
-
-    # Display CSS-styled table 
-    table_html = f"""
-    <style>
-    .top-artists-table {{
-        width: 100%;
-        border-collapse: collapse;
-        font-family: 'Source Sans Pro', sans-serif;
-    }}
-    .top-artists-table th, .top-artists-table td {{
-        border: 1px solid #ddd;
-        padding: 10px 12px;
-        text-align: center;
-    }}
-    .top-artists-table th {{
-        background-color: #1DB954;
-        color: white;
-        font-size: 16px;
-    }}
-    .top-artists-table tr:nth-child(even) {{
-        background-color: #f9f9f9;
-    }}
-    .top-artists-table tr:hover {{
-        background-color: #e0e0e0;
-    }}
-    </style>
-
-    <table class="top-artists-table">
-        <tr>
-            <th>Rank</th>
-            <th>Artist</th>
-            <th>Average Popularity</th>
-        </tr>
-    """
-
-    for i, (artist, pop) in enumerate(top_10.items(), start=1):
-        table_html += f"""
-        <tr>
-            <td>{i}</td>
-            <td>{artist}</td>
-            <td>{pop}</td>
-        </tr>
-        """
-
-    table_html += "</table>"
-
-    st.markdown(table_html, unsafe_allow_html=True)
-
+    
+    # Render the chart in Streamlit
+    st.pyplot(fig)
 
 def top_ten_per_genre(df, genre):
     df_filtered = df[df['artist_genres'].str.contains(genre, case=False, na=False)]

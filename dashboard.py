@@ -2,34 +2,47 @@ import streamlit as st
 import sqlite3
 import pandas as pd
 import matplotlib.pyplot as plt
+import seaborn as sns
 from collections import Counter
-from analysis import top_10_artists
 
-# Load data
+# Import your custom modules
+from analysis import top_10_artists
+import data_wrangling as dw
+
+# --- Load Data Function ---
 @st.cache_data
 def load_data():
     conn = sqlite3.connect("data/spotify_database.db")
-    
+
     artists = pd.read_sql("SELECT * FROM artist_data", conn)
     tracks = pd.read_sql("SELECT * FROM tracks_data", conn)
     albums = pd.read_sql("SELECT * FROM albums_data", conn)
+    features = pd.read_sql("SELECT * FROM features_data", conn)
+
+    conn.close()
+
+    return artists, tracks, albums, features, 
+
+# --- Basic Dashboard ---
+def basic_dashboard(artists, tracks, albums):
+    st.title("Spotify Data Analysis Dashboard")
     
-    # Genres
+    # Load data
+    artists, tracks, albums, features = load_data()
+
+     # --- Compute genre counts ---
     genre_cols = [col for col in ["genre_1","genre_2","genre_3","genre_4","genre_5","genre_6"] if col in artists.columns]
+    
     genre_counts = Counter()
     for row in artists[genre_cols].values:
         genres = [g for g in row if pd.notna(g) and g != ""]
         genre_counts.update(genres)
-    genre_df = pd.DataFrame(genre_counts.items(), columns=["Genre","Count"]).sort_values(by="Count", ascending=False)
     
-    conn.close()
-    return artists, tracks, albums, genre_df
-
-def main():
-    st.title("Spotify Data Analysis Dashboard")
-    
-    # Load data
-    artists, tracks, albums, genre_df = load_data()
+    genre_df = (
+        pd.DataFrame(genre_counts.items(), columns=["Genre","Count"])
+          .sort_values(by="Count", ascending=False)
+          .reset_index(drop=True)
+    )
     
     # --- Key Metrics ---
     st.header("Key Statistics")
@@ -101,5 +114,56 @@ def main():
         plt.xticks(rotation=45)
         st.pyplot(fig_genres)
 
+# --- Advanced Dashboard ---
+def advanced_dashboard(artists, tracks, albums, features):
+    st.header("Spotify Advanced Dashboard")
+
+    st.sidebar.header("Controls")
+
+    # --- Example: Album Feature Scores ---
+    st.subheader("Album Feature Scores")
+    album_input = st.text_input("Enter Album Name:", value="Black Sand")
+    if album_input:
+        album_data = albums[albums['album_name'].str.lower() == album_input.lower()]
+        if not album_data.empty:
+            avg_pop = album_data['album_popularity'].mean()
+            st.metric("Average Album Popularity", f"{avg_pop:.2f}/100")
+
+            album_tracks_features = album_data.merge(features, left_on="track_id", right_on="id")
+            if not album_tracks_features.empty:
+                feature_cols = ["danceability","energy","speechiness","acousticness",
+                                "instrumentalness","liveness","valence"]
+                stats = album_tracks_features[feature_cols].mean()
+                st.bar_chart(stats)
+            else:
+                st.warning("No feature data for this album.")
+        else:
+            st.error("Album not found.")
+
+    # --- Example: Explicit Content Analysis ---
+    st.subheader("Explicit vs Non-Explicit Tracks")
+    exp_pop = tracks.groupby("explicit")["track_popularity"].mean().reset_index()
+    fig, ax = plt.subplots()
+    ax.bar(exp_pop["explicit"], exp_pop["track_popularity"], color=['#1DB954','#191414'])
+    ax.set_ylabel("Avg Popularity")
+    ax.set_title("Explicit vs Non-Explicit Tracks")
+    st.pyplot(fig)
+
+# --- Main App ---
+def main():
+    st.set_page_config(page_title="Spotify Dashboard", layout="wide")
+    st.sidebar.title("Navigation")
+    page = st.sidebar.radio("Select Dashboard Page:", ["Basic Dashboard", "Advanced Dashboard"])
+
+    # Load data once
+    artists, tracks, albums, features = load_data()
+
+    if page == "Basic Dashboard":
+        basic_dashboard(artists, tracks, albums)
+    elif page == "Advanced Dashboard":
+        advanced_dashboard(artists, tracks, albums, features)
+
 if __name__ == "__main__":
     main()
+
+    """Sidebar for albums, genres and artists (add code)"""
