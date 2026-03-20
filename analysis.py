@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sb
 import statsmodels.api as sm
+import streamlit as st
 
 
 def load_data():
@@ -36,6 +37,53 @@ def top_10_artists(df):
     plt.xticks(rotation=45)
     plt.tight_layout()
     plt.show()
+
+    # Display CSS-styled table 
+    table_html = f"""
+    <style>
+    .top-artists-table {{
+        width: 100%;
+        border-collapse: collapse;
+        font-family: 'Source Sans Pro', sans-serif;
+    }}
+    .top-artists-table th, .top-artists-table td {{
+        border: 1px solid #ddd;
+        padding: 10px 12px;
+        text-align: center;
+    }}
+    .top-artists-table th {{
+        background-color: #1DB954;
+        color: white;
+        font-size: 16px;
+    }}
+    .top-artists-table tr:nth-child(even) {{
+        background-color: #f9f9f9;
+    }}
+    .top-artists-table tr:hover {{
+        background-color: #e0e0e0;
+    }}
+    </style>
+
+    <table class="top-artists-table">
+        <tr>
+            <th>Rank</th>
+            <th>Artist</th>
+            <th>Average Popularity</th>
+        </tr>
+    """
+
+    for i, (artist, pop) in enumerate(top_10.items(), start=1):
+        table_html += f"""
+        <tr>
+            <td>{i}</td>
+            <td>{artist}</td>
+            <td>{pop}</td>
+        </tr>
+        """
+
+    table_html += "</table>"
+
+    st.markdown(table_html, unsafe_allow_html=True)
 
 
 def top_ten_per_genre(df, genre):
