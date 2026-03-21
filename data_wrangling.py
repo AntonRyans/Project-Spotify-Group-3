@@ -11,16 +11,30 @@ def clean_features(features_df):
     features_df = features_df.dropna(subset=["id"])
 
     required_numeric = [
-        "danceability", "energy", "speechiness",
-        "acousticness", "instrumentalness", "liveness",
-        "valence", "key", "mode", "loudness", "tempo",
-        "duration_ms", "time_signature"
+        "danceability",
+        "energy",
+        "speechiness",
+        "acousticness",
+        "instrumentalness",
+        "liveness",
+        "valence",
+        "key",
+        "mode",
+        "loudness",
+        "tempo",
+        "duration_ms",
+        "time_signature",
     ]
     features_df = features_df.dropna(subset=required_numeric)
 
     numeric_cols_0_1 = [
-        "danceability", "energy", "speechiness",
-        "acousticness", "instrumentalness", "liveness", "valence"
+        "danceability",
+        "energy",
+        "speechiness",
+        "acousticness",
+        "instrumentalness",
+        "liveness",
+        "valence",
     ]
 
     for col in numeric_cols_0_1:
@@ -40,8 +54,7 @@ def clean_features(features_df):
 def clean_tracks(tracks_df):
     tracks_df = tracks_df.dropna(subset=["id"])
     tracks_df = tracks_df[
-        (tracks_df["track_popularity"] >= 0) &
-        (tracks_df["track_popularity"] <= 100)
+        (tracks_df["track_popularity"] >= 0) & (tracks_df["track_popularity"] <= 100)
     ]
     tracks_df = tracks_df[tracks_df["explicit"].isin(["false", "true"])]
     tracks_df = tracks_df.drop_duplicates()
@@ -54,8 +67,7 @@ def clean_albums(albums_df):
     albums_df = albums_df[albums_df["duration_ms"] > 0]
     albums_df = albums_df[albums_df["duration_sec"] > 0]
     albums_df = albums_df[
-        (albums_df["album_popularity"] >= 0) &
-        (albums_df["album_popularity"] <= 100)
+        (albums_df["album_popularity"] >= 0) & (albums_df["album_popularity"] <= 100)
     ]
     albums_df = albums_df[albums_df["total_tracks"] > 0]
     albums_df = albums_df.dropna(axis=1, how="all")
@@ -67,8 +79,8 @@ def clean_albums(albums_df):
 def clean_artists(artists_df):
     artists_df = artists_df.dropna(subset=["id", "name"])
     artists_df = artists_df[
-        (artists_df["artist_popularity"] >= 0) &
-        (artists_df["artist_popularity"] <= 100)
+        (artists_df["artist_popularity"] >= 0)
+        & (artists_df["artist_popularity"] <= 100)
     ]
     artists_df = artists_df[artists_df["followers"] >= 0]
     artists_df = artists_df.dropna(axis=1, how="all")
@@ -116,10 +128,7 @@ def resolve_artist_duplicate_names(artists_df):
 
 def album_feature_summary(album_name, albums_df, features_df):
     albums_features = albums_df.merge(
-        features_df,
-        left_on="track_id",
-        right_on="id",
-        how="inner"
+        features_df, left_on="track_id", right_on="id", how="inner"
     )
 
     album_tracks = albums_features[
@@ -139,7 +148,7 @@ def album_feature_summary(album_name, albums_df, features_df):
         "liveness",
         "valence",
         "tempo",
-        "loudness"
+        "loudness",
     ]
 
     summary = album_tracks[feature_columns].mean()
@@ -154,9 +163,7 @@ def add_feature_ranks(features_df, rank_features, labels):
     for feature in rank_features:
         if feature in features_ranked.columns:
             features_ranked[f"{feature}_rank"] = pd.qcut(
-                features_ranked[feature],
-                5,
-                labels=labels
+                features_ranked[feature], 5, labels=labels
             )
 
     return features_ranked
@@ -211,9 +218,15 @@ def main():
 
     monthly_df = pd.read_sql_query(query, database_connect)
 
-    monthly_df["track_popularity"] = pd.to_numeric(monthly_df["track_popularity"], errors="coerce")
-    monthly_df["release_date"] = pd.to_datetime(monthly_df["release_date"], errors="coerce")
-    monthly_df = monthly_df.dropna(subset=["track_name", "track_popularity", "release_date"])
+    monthly_df["track_popularity"] = pd.to_numeric(
+        monthly_df["track_popularity"], errors="coerce"
+    )
+    monthly_df["release_date"] = pd.to_datetime(
+        monthly_df["release_date"], errors="coerce"
+    )
+    monthly_df = monthly_df.dropna(
+        subset=["track_name", "track_popularity", "release_date"]
+    )
 
     monthly_df["year_month"] = monthly_df["release_date"].dt.to_period("M")
 
@@ -307,7 +320,9 @@ def main():
     labels = ["very low", "low", "medium", "high", "very high"]
     features_ranked = add_feature_ranks(features_clean, rank_features, labels)
 
-    rank_columns = [feature for feature in rank_features if feature in features_ranked.columns]
+    rank_columns = [
+        feature for feature in rank_features if feature in features_ranked.columns
+    ]
     display_columns = []
 
     for feature in rank_columns:

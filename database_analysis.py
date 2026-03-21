@@ -5,9 +5,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import zscore
 
+
 # Connect to Database
 def connect_db():
     return sqlite3.connect("data/spotify_database.db")
+
 
 # Find outliers using Z-scores
 def outliers(conn):
@@ -21,17 +23,18 @@ def outliers(conn):
     df_numeric = df[numeric_cols]
 
     # Compute Z-scores
-    z_scores = np.abs(zscore(df_numeric, nan_policy='omit'))
+    z_scores = np.abs(zscore(df_numeric, nan_policy="omit"))
 
-    # Threshold 
+    # Threshold
     threshold = 3
 
     # Boolean mask for outliers
-    outliers_z = (z_scores > threshold)
+    outliers_z = z_scores > threshold
 
     # Count outliers per column
     print("Outliers per column (Z-score):")
     print(pd.DataFrame(outliers_z, columns=numeric_cols).sum())
+
 
 # Analyze an album
 def analyze_album(conn, album_name):
@@ -42,12 +45,15 @@ def analyze_album(conn, album_name):
     print(f"\nAnalyzing album: {album_name}")
 
     # SQL Query to Count number of tracks in the given album
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT COUNT(track_id)
         FROM albums_data
         WHERE album_name = ?
-    """, (album_name,))
- 
+    """,
+        (album_name,),
+    )
+
     # Fetching tracks from an Album using Cursor
     track_count = cursor.fetchone()[0]
 
@@ -56,9 +62,10 @@ def analyze_album(conn, album_name):
     if track_count == 0:
         print("No data found for this album.")
         return
-    
+
     # SQL Query to get track names along with selected audio features
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT 
             albums_data.track_name,
             features_data.danceability,
@@ -67,22 +74,22 @@ def analyze_album(conn, album_name):
         JOIN features_data
             ON albums_data.track_id = features_data.id
         WHERE albums_data.album_name = ?
-    """, (album_name,))
+    """,
+        (album_name,),
+    )
 
     # Fetching tracks from an Album using Cursor to Variable
     tracks = cursor.fetchall()
 
     # Create Dataframe
-    df = pd.DataFrame(
-        tracks,
-        columns=["track_name", "danceability", "loudness"]
-    )
+    df = pd.DataFrame(tracks, columns=["track_name", "danceability", "loudness"])
 
     print("\nTracks + Features:")
     print(df)
 
     print("\nFeature Statistics:")
     print(df[["danceability", "loudness"]].describe())
+
 
 # Analyze features of tracks
 def analyze_feature(conn, feature_name):
@@ -114,8 +121,13 @@ def analyze_feature(conn, feature_name):
         return
 
     columns = [
-        "track_name","artist_0","artist_1","artist_2",
-        "artist_3","artist_4", feature_name
+        "track_name",
+        "artist_0",
+        "artist_1",
+        "artist_2",
+        "artist_3",
+        "artist_4",
+        feature_name,
     ]
 
     # Create Dataframe with variables
@@ -131,13 +143,13 @@ def analyze_feature(conn, feature_name):
     df_top = df[df[feature_name] >= threshold]
 
     # Columns containing artist names (multiple artists per track)
-    artist_cols = ["artist_0","artist_1","artist_2","artist_3","artist_4"]
+    artist_cols = ["artist_0", "artist_1", "artist_2", "artist_3", "artist_4"]
 
     # Convert wide artist columns into long format (one artist per row)
     df_new = df_top.melt(
         id_vars=["track_name", feature_name],
         value_vars=artist_cols,
-        value_name="artist"
+        value_name="artist",
     )
 
     # Remove missing or empty artist names
@@ -157,20 +169,24 @@ def analyze_feature(conn, feature_name):
         .head(10)
     )
 
+
 # Plot histogram of a specific audio feature for a given album.
 def plot_feature_distribution(conn, album_name, feature_name):
 
     cursor = conn.cursor()
 
     # Fetch feature values for the selected album
-    cursor.execute(f"""
+    cursor.execute(
+        f"""
         SELECT 
             features_data.{feature_name}
         FROM albums_data
         JOIN features_data
             ON albums_data.track_id = features_data.id
         WHERE albums_data.album_name = ?
-    """, (album_name,))
+    """,
+        (album_name,),
+    )
 
     # Extract values from query result
     values = [row[0] for row in cursor.fetchall()]
@@ -181,14 +197,9 @@ def plot_feature_distribution(conn, album_name, feature_name):
         return
 
     # Create histogram
-    plt.figure(figsize=(8,5))
+    plt.figure(figsize=(8, 5))
 
-    hist_values, _, _ = plt.hist(
-        values,
-        bins=10,
-        rwidth=0.85,
-        edgecolor="black"
-    )
+    hist_values, _, _ = plt.hist(values, bins=10, rwidth=0.85, edgecolor="black")
 
     # Adjust y-axis to show integer counts
     if len(hist_values) > 0:
@@ -202,6 +213,7 @@ def plot_feature_distribution(conn, album_name, feature_name):
     plt.title(f"{feature_name} distribution for {album_name}")
 
     plt.show()
+
 
 # Analyze proportion of explicit tracks per artist.
 def explicit_artist_analysis(conn):
@@ -239,6 +251,7 @@ def explicit_artist_analysis(conn):
     for row in rows:
         print(row)
 
+
 # Preview extraction of release decade (e.g., 1990s, 2000s).
 def analyze_eras(conn):
 
@@ -258,6 +271,7 @@ def analyze_eras(conn):
     print("\nEra extraction preview:")
     print(column_names)
 
+
 # Analyze monthly popularity trends for top songs.
 def monthly_popularity(conn):
 
@@ -274,17 +288,17 @@ def monthly_popularity(conn):
     df = pd.read_sql_query(query, conn)
 
     # Data Cleaning
-    df['track_popularity'] = pd.to_numeric(df['track_popularity'], errors='coerce')
-    df['release_date'] = pd.to_datetime(df['release_date'], errors='coerce')
+    df["track_popularity"] = pd.to_numeric(df["track_popularity"], errors="coerce")
+    df["release_date"] = pd.to_datetime(df["release_date"], errors="coerce")
 
-    df = df.dropna(subset=['track_name', 'track_popularity', 'release_date'])
+    df = df.dropna(subset=["track_name", "track_popularity", "release_date"])
 
     # Create Month Column
-    df['year_month'] = df['release_date'].dt.to_period('M')
+    df["year_month"] = df["release_date"].dt.to_period("M")
 
     #  Find Top Songs
     top_songs = (
-        df.groupby('track_name')['track_popularity']
+        df.groupby("track_name")["track_popularity"]
         .sum()
         .sort_values(ascending=False)
         .head(10)
@@ -296,33 +310,31 @@ def monthly_popularity(conn):
     print(top_songs)
 
     # Filter Top Songs
-    df_top = df[df['track_name'].isin(top_song_names)]
+    df_top = df[df["track_name"].isin(top_song_names)]
 
     # Aggregate Monthly Data
     monthly_agg = (
-        df_top.groupby(['year_month', 'track_name'])
-        .agg({
-            'track_popularity': 'mean'
-        })
+        df_top.groupby(["year_month", "track_name"])
+        .agg({"track_popularity": "mean"})
         .reset_index()
     )
 
     # Convert for plotting
-    monthly_agg['year_month'] = monthly_agg['year_month'].astype(str)
+    monthly_agg["year_month"] = monthly_agg["year_month"].astype(str)
 
     # Sort properly
-    monthly_agg = monthly_agg.sort_values('year_month')
+    monthly_agg = monthly_agg.sort_values("year_month")
 
     # Plot Popularity Over Time
     plt.figure()
 
     for song in top_song_names:
-        song_data = monthly_agg[monthly_agg['track_name'] == song]
-        plt.plot(song_data['year_month'], song_data['track_popularity'], label=song)
+        song_data = monthly_agg[monthly_agg["track_name"] == song]
+        plt.plot(song_data["year_month"], song_data["track_popularity"], label=song)
 
-    plt.title('Monthly Popularity Trends for Top Songs')
-    plt.xlabel('Month')
-    plt.ylabel('Average Popularity')
+    plt.title("Monthly Popularity Trends for Top Songs")
+    plt.xlabel("Month")
+    plt.ylabel("Average Popularity")
     plt.xticks(rotation=45)
     plt.legend()
     plt.tight_layout()
@@ -355,6 +367,7 @@ def explicit_vs_nonexplicit(conn):
     explicit = cursor.fetchone()[0]
 
     print("The average popularity for explicit tracks is:", explicit)
+
 
 # Main function to run all analyses.
 def main():
@@ -398,6 +411,7 @@ def main():
 
     # Close database connection
     conn.close()
+
 
 # Entry point of the script
 if __name__ == "__main__":
