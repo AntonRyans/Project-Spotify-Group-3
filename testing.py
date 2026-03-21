@@ -1333,6 +1333,45 @@ def create_album_explorer(
         else:
             st.info("Explicitness information is not available.")
 
+def create_track_ranking(albums, features):
+    st.header("🔍 Individual Track Ranking")
+
+    song_input = st.text_input("Enter Track Name:", value="")
+
+    if song_input:
+        track_row = albums[
+            albums["track_name"].str.lower() == song_input.lower()
+        ]
+
+        if not track_row.empty:
+            tid = track_row.iloc[0]["track_id"]
+
+            rank_features = [
+                "danceability",
+                "energy",
+                "speechiness",
+                "acousticness",
+            ]
+
+            labels = ["Very Low", "Low", "Medium", "High", "Very High"]
+
+            # Generate ranked dataframe
+            ranked_df = dw.add_feature_ranks(features, rank_features, labels)
+
+            track_rank = ranked_df[ranked_df["id"] == tid]
+
+            if not track_rank.empty:
+                st.write(f"Scoring for {song_input}:")
+
+                cols = st.columns(len(rank_features))
+                for i, feat in enumerate(rank_features):
+                    val = track_rank[f"{feat}_rank"].values[0]
+                    cols[i].metric(feat.title(), val)
+            else:
+                st.warning("Feature data for this specific track is missing.")
+        else:
+            st.info("Track not found. Please check the name.")
+
 
 # -----------------------------
 # Main app
@@ -1363,6 +1402,7 @@ def main():
             "Genre Explorer",
             "Feature Explorer",
             "Album Explorer",
+            "Track Explorer",
             "Time Trends",
         ],
         label_visibility="collapsed",
@@ -1516,6 +1556,9 @@ def main():
             album_search,
             selected_album,
         )
+
+    elif page == "Track Explorer":
+        create_track_ranking(albums, features)
 
     elif page == "Time Trends":
         create_time_trends(albums, year_range)
