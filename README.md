@@ -39,7 +39,7 @@ The goal of this project is to provide meaningful insights into Spotify datasets
 
 ## Setup Instructions
 
-1. Install **Python 3.13**
+1. Install **Python 3.12**
 
 2. Clone the repository:
 ```bash
