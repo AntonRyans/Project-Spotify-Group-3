@@ -1,14 +1,12 @@
+# Import Libraries
 import streamlit as st
 import sqlite3
 import pandas as pd
 import matplotlib.pyplot as plt
 from collections import Counter
-
 import data_wrangling as dw
 
-# -----------------------------
 # Theme constants
-# -----------------------------
 SPOTIFY_GREEN = "#1DB954"
 SPOTIFY_BG = "#121212"
 SPOTIFY_PANEL = "#181818"
@@ -16,9 +14,7 @@ SPOTIFY_SIDEBAR = "#000000"
 SPOTIFY_TEXT = "white"
 SPOTIFY_MUTED = "#B3B3B3"
 
-# -----------------------------
 # Page setup
-# -----------------------------
 st.set_page_config(
     page_title="Spotify Insights Dashboard",
     page_icon="🎵",
@@ -215,9 +211,7 @@ st.markdown(
 )
 
 
-# -----------------------------
 # Data loading
-# -----------------------------
 @st.cache_data
 def load_and_clean_data():
     conn = sqlite3.connect("data/spotify_database.db")
@@ -236,10 +230,14 @@ def load_and_clean_data():
     return df_artists, df_tracks, df_albums, df_features
 
 
-# -----------------------------
 # Helper functions
-# -----------------------------
 def prepare_album_year(albums):
+    """
+    Ensures the albums DataFrame has a 'year' column.
+    If missing, it attempts to derive it from:
+    - 'release_date' (datetime conversion)
+    - 'album_year' (numeric conversion)
+    """
     albums = albums.copy()
 
     if "year" not in albums.columns:
@@ -254,6 +252,10 @@ def prepare_album_year(albums):
 
 
 def build_genre_df(artists):
+    """
+    Creates a DataFrame counting occurrences of each genre
+    across multiple genre columns in the artists DataFrame.
+    """
     genre_cols = [
         col
         for col in ["genre_1", "genre_2", "genre_3", "genre_4", "genre_5", "genre_6"]
@@ -274,6 +276,10 @@ def build_genre_df(artists):
 
 
 def filter_data_by_year(albums, year_range):
+    """
+    Filters the albums DataFrame based on a given year range (tuple/list).
+    Example: year_range = (2000, 2020)
+    """
     albums_filtered = albums.copy()
 
     if "year" in albums_filtered.columns:
@@ -284,13 +290,22 @@ def filter_data_by_year(albums, year_range):
 
     return albums_filtered
 
-
+# Graph Styling Functions
 def style_figure(fig, ax):
+    """
+    Applies Spotify-themed background styling to the figure and axes.
+    """
     fig.patch.set_facecolor(SPOTIFY_BG)
     ax.set_facecolor(SPOTIFY_BG)
 
 
 def style_axis(ax, title, xlabel="", ylabel=""):
+    """
+    Styles axis with consistent theme:
+    - Title, labels, ticks
+    - Spine visibility and colors
+    - Grid appearance
+    """
     ax.set_title(title, fontsize=13, pad=12, color=SPOTIFY_TEXT)
     ax.set_xlabel(xlabel, color=SPOTIFY_TEXT)
     ax.set_ylabel(ylabel, color=SPOTIFY_TEXT)
@@ -305,10 +320,20 @@ def style_axis(ax, title, xlabel="", ylabel=""):
 
 
 def create_section_divider():
+    """
+    Inserts a visual divider in the Streamlit app using custom HTML.
+    """
     st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
 
 
 def get_artist_row(artists, artist_name):
+    """
+    Retrieves a row from the artists DataFrame that matches the given artist name.
+    Returns an empty DataFrame if:
+    - artist_name is invalid
+    - 'name' column does not exist
+    - no match is found
+    """
     if not artist_name or "name" not in artists.columns:
         return pd.DataFrame()
 
@@ -321,6 +346,16 @@ def get_artist_row(artists, artist_name):
 
 
 def get_artist_track_data(albums, tracks, artist_name, year_range=None):
+    """
+    Retrieves track-level data for a specific artist by:
+    1. Filtering albums by artist name (and optional year range)
+    2. Merging with track data using track IDs
+
+    Returns an empty DataFrame if:
+    - artist_name is invalid
+    - required columns are missing
+    - no matching records exist
+    """
     if not artist_name:
         return pd.DataFrame()
 
@@ -343,6 +378,12 @@ def get_artist_track_data(albums, tracks, artist_name, year_range=None):
 
 
 def extract_artist_genres(artist_row):
+    """
+    Extracts a list of genres from a single artist row.
+    Handles multiple genre columns (genre_1 to genre_6).
+
+    Returns a list of non-empty genre strings.
+    """
     genre_cols = [
         col
         for col in ["genre_1", "genre_2", "genre_3", "genre_4", "genre_5", "genre_6"]
@@ -359,6 +400,16 @@ def extract_artist_genres(artist_row):
 
 
 def get_album_filter_columns(albums):
+    """
+    Dynamically identifies key columns in the albums DataFrame:
+    - Album name column
+    - Artist column
+    - Popularity column
+
+    Uses fallback logic if standard column names are not found.
+    Returns:
+        (album_name_col, artist_col, popularity_col)
+    """
     album_name_candidates = ["album_name", "name", "title"]
     album_name_col = next(
         (c for c in album_name_candidates if c in albums.columns),
@@ -398,10 +449,16 @@ def get_album_filter_columns(albums):
     return album_name_col, artist_col, popularity_col
 
 
-# -----------------------------
-# Page creators
-# -----------------------------
+# Page Creators (Streamlit Views)
 def create_overview(artists, tracks, albums, features, genre_df, year_range):
+    """
+    Creates the main dashboard overview page.
+
+    Displays:
+    - Summary metrics (artists, tracks, albums, genres)
+    - Quick visualisations (genre distribution, popularity distribution)
+    - Top insights (artists, albums, genres)
+    """
     st.markdown(
         """
         <div class="hero-card">
@@ -642,7 +699,15 @@ def create_overview(artists, tracks, albums, features, genre_df, year_range):
 def create_artist_explorer(
     artists, tracks, albums, features, artist_search, year_range
 ):
-    st.title("🎤 Artist Explorer")
+    """
+    Creates an interactive page to explore a specific artist.
+
+    Displays:
+    - Artist summary (followers, popularity, genres)
+    - Track-level metrics
+    - Tabs: Top Tracks, Explicitness, Audio Features
+    """
+    st.title("Artist Explorer")
     st.caption(
         "Use the control panel to choose an artist and explore popularity, genres, track performance, and explicitness."
     )
@@ -872,7 +937,13 @@ def create_artist_explorer(
 
 
 def create_genre_explorer(artists, selected_genre):
-    st.title("🎧 Genre Explorer")
+    """
+    Displays insights for a selected genre:
+    - Artist count
+    - Average popularity
+    - Top artists
+    """
+    st.title("Genre Explorer")
     st.caption(
         "Use the control panel to explore artist counts, popularity, and top performers by genre."
     )
@@ -947,7 +1018,12 @@ def create_genre_explorer(artists, selected_genre):
 
 
 def create_feature_explorer(features, tracks, selected_feature):
-    st.title("🎚️ Feature Explorer")
+    """
+    Visualizes:
+    - Distribution of selected audio feature
+    - Relationship between feature and track popularity
+    """
+    st.title("Feature Explorer")
     st.caption(
         "Use the control panel to explore the distribution of audio features and their relationship with popularity."
     )
@@ -1005,7 +1081,12 @@ def create_feature_explorer(features, tracks, selected_feature):
 
 
 def create_time_trends(albums, year_range):
-    st.title("⏳ Time Trends")
+    """
+    Displays time-based trends:
+    - Releases per year
+    - Popularity trends over time
+    """
+    st.title("Time Trends")
     st.caption("Explore how release activity and popularity change over time.")
 
     if "year" not in albums.columns:
@@ -1134,7 +1215,13 @@ def create_album_explorer(
     album_search,
     selected_album,
 ):
-    st.title("💿 Album Explorer")
+    """
+    Displays album-level insights:
+    - Album metadata
+    - Linked tracks
+    - Popularity & explicitness
+    """
+    st.title("Album Explorer")
     st.caption(
         "Use the control panel to filter by artist and album name, then select an album to explore tracks, popularity, and release details."
     )
@@ -1338,7 +1425,13 @@ def create_track_ranking(
     features,
     selected_track,
 ):
-    st.title("🎵 Track Ranking")
+    """
+    Displays feature-based ranking for a selected track.
+
+    Uses:
+    - Quantile-based ranking labels (Very Low → Very High)
+    """
+    st.title("Track Explorer")
     st.caption(
         "Use the control panel to search and select a track to view its feature-based ranking."
     )
@@ -1388,7 +1481,7 @@ def create_track_ranking(
         st.warning("Feature data for this track is missing.")
         return
 
-    # 🎯 MAIN DISPLAY
+    # MAIN DISPLAY
     st.subheader(selected_track)
 
     cols = st.columns(len(rank_features))
@@ -1407,9 +1500,7 @@ def create_track_ranking(
         raw_cols[i].metric(feat.title(), f"{raw_val:.2f}")
 
 
-# -----------------------------
 # Main app
-# -----------------------------
 def main():
     artists, tracks, albums, features = load_and_clean_data()
     albums = prepare_album_year(albums)
