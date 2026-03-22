@@ -27,16 +27,14 @@ The goal of this project is to provide meaningful insights into Spotify datasets
 ---
 
 ## Project Structure
-```
 
-Project-Spotify-Group-3/
-│── dashboard.py          # Main Streamlit application
-│── requirements.txt      # Project dependencies
-│── data/                 # Dataset files 
-│── analysis.py           # Data Analysis Python file from Part 1 of the assignment           
-│── database_analysis.py  # Database Analysis Python file from Parts 2 and 3 of the assignment
-│── data_wrangling.py     # Data Wrangling Python file from Part 4 of the assignment
-```
+- dashboard.py — Main Streamlit application
+- requirements.txt — Project dependencies
+- data/ — Dataset files
+- analysis.py — Data Analysis (Part 1)
+- database_analysis.py — Database Analysis (Parts 2 and 3)
+- data_wrangling.py — Data Wrangling (Part 4)
+
 ---
 
 ## Setup Instructions
