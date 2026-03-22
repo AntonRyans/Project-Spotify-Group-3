@@ -1,4 +1,3 @@
-```markdown
 # Project Spotify Dashboard by Group 3
 
 ## Description
@@ -37,7 +36,7 @@ Project-Spotify-Group-3/
 │── analysis.py           # Data Analysis Python file from Part 1 of the assignment           
 │── database_analysis.py  # Database Analysis Python file from Parts 2 and 3 of the assignment
 │── data_wrangling.py     # Data Wrangling Python file from Part 4 of the assignment
-
+```
 ---
 
 ## Setup Instructions
@@ -54,39 +53,39 @@ cd Project-Spotify-Group-3
 
 ```bash
 python -m venv venv
-```
+````
 
 4. Activate the virtual environment:
 
-* **Windows:**
+ **Windows:**
 
 ```bash
 venv\Scripts\activate
-```
+````
 
-* **Mac/Linux:**
+ **Mac/Linux:**
 
 ```bash
 source venv/bin/activate
-```
+````
 
 5. Install dependencies:
 
 ```bash
 pip install -r requirements.txt
-```
+````
 
 6. Verify installation:
 
 ```bash
 pip list
-```
+````
 
 7. Run the dashboard:
 
 ```bash
 streamlit run dashboard.py
-```
+````
 
 ---
 
@@ -94,13 +93,13 @@ streamlit run dashboard.py
 
 Make sure the following libraries are installed (included in `requirements.txt`):
 
-* matplotlib
-* numpy
-* pandas
-* PuLP
-* scipy
-* seaborn
-* streamlit
+- matplotlib
+- numpy
+- pandas
+- PuLP
+- scipy
+- seaborn
+- streamlit
 
 ---
 
@@ -123,6 +122,3 @@ Project developed as part of a university assignment by:
 ## License
 
 This project is for educational purposes only.
-
-```
-```
