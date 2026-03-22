@@ -1333,44 +1333,78 @@ def create_album_explorer(
         else:
             st.info("Explicitness information is not available.")
 
-def create_track_ranking(albums, features):
-    st.header("🔍 Individual Track Ranking")
+def create_track_ranking(
+    albums,
+    features,
+    selected_track,
+):
+    st.title("🎵 Track Ranking")
+    st.caption(
+        "Use the control panel to search and select a track to view its feature-based ranking."
+    )
 
-    song_input = st.text_input("Enter Track Name:", value="")
+    if albums.empty or features.empty:
+        st.warning("Required data is missing.")
+        return
 
-    if song_input:
-        track_row = albums[
-            albums["track_name"].str.lower() == song_input.lower()
-        ]
+    if "track_name" not in albums.columns or "track_id" not in albums.columns:
+        st.warning("Track information is not properly structured in albums data.")
+        return
 
-        if not track_row.empty:
-            tid = track_row.iloc[0]["track_id"]
+    track_pool = albums
 
-            rank_features = [
-                "danceability",
-                "energy",
-                "speechiness",
-                "acousticness",
-            ]
+    if track_pool.empty:
+        st.info("No tracks match your search.")
+        return
 
-            labels = ["Very Low", "Low", "Medium", "High", "Very High"]
+    if not selected_track:
+        st.info("Select a track from the control panel.")
+        return
 
-            # Generate ranked dataframe
-            ranked_df = dw.add_feature_ranks(features, rank_features, labels)
+    track_row = track_pool[
+        track_pool["track_name"].str.lower() == selected_track.lower()
+    ]
 
-            track_rank = ranked_df[ranked_df["id"] == tid]
+    if track_row.empty:
+        st.warning("Selected track not found.")
+        return
 
-            if not track_rank.empty:
-                st.write(f"Scoring for {song_input}:")
+    tid = track_row.iloc[0]["track_id"]
 
-                cols = st.columns(len(rank_features))
-                for i, feat in enumerate(rank_features):
-                    val = track_rank[f"{feat}_rank"].values[0]
-                    cols[i].metric(feat.title(), val)
-            else:
-                st.warning("Feature data for this specific track is missing.")
-        else:
-            st.info("Track not found. Please check the name.")
+    rank_features = [
+        "danceability",
+        "energy",
+        "speechiness",
+        "acousticness",
+    ]
+
+    labels = ["Very Low", "Low", "Medium", "High", "Very High"]
+
+    ranked_df = dw.add_feature_ranks(features, rank_features, labels)
+
+    track_rank = ranked_df[ranked_df["id"] == tid]
+
+    if track_rank.empty:
+        st.warning("Feature data for this track is missing.")
+        return
+
+    # 🎯 MAIN DISPLAY
+    st.subheader(selected_track)
+
+    cols = st.columns(len(rank_features))
+    for i, feat in enumerate(rank_features):
+        val = track_rank[f"{feat}_rank"].values[0]
+        cols[i].metric(feat.title(), val)
+
+    create_section_divider()
+
+    # Raw values
+    st.markdown("### Raw Feature Values")
+
+    raw_cols = st.columns(len(rank_features))
+    for i, feat in enumerate(rank_features):
+        raw_val = track_rank[feat].values[0]
+        raw_cols[i].metric(feat.title(), f"{raw_val:.2f}")
 
 
 # -----------------------------
@@ -1528,6 +1562,20 @@ def main():
         st.sidebar.write(f"**Album:** {selected_album if selected_album else 'None'}")
     st.sidebar.write(f"**Years:** {year_range[0]}–{year_range[1]}")
 
+    st.sidebar.markdown("### 🎵 Track Controls")
+
+    track_options = (
+        albums["track_name"]
+        .dropna()
+        .sort_values()
+        .unique()
+    )
+
+    selected_track = st.sidebar.selectbox(
+        "Select Track",
+        track_options
+    )
+
     if page == "Overview":
         create_overview(artists, tracks, albums, features, genre_df, year_range)
 
@@ -1558,7 +1606,11 @@ def main():
         )
 
     elif page == "Track Explorer":
-        create_track_ranking(albums, features)
+        create_track_ranking(
+        albums,
+        features,
+        selected_track,
+    )
 
     elif page == "Time Trends":
         create_time_trends(albums, year_range)
